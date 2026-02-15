@@ -1,5 +1,5 @@
 {
-  "name": "demo-name",
+  "name": "nest-backend",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -25,6 +25,8 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/mongoose": "^11.0.4",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.6",
+    "dotenv": "^17.2.4",
     "mongoose": "^9.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
