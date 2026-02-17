@@ -10,13 +10,21 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './schemas/user.schema';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('users')
+@ApiBearerAuth('JWT-auth')
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -45,6 +53,7 @@ export class UserController {
     return this.userService.findOne(id);
   }
 
+  @Public()
   @Post()
   @ApiOperation({ summary: '创建新用户', description: '创建一个新的用户' })
   @ApiResponse({ status: 201, description: '用户创建成功' })
@@ -94,6 +103,7 @@ export class UserController {
 @ApiTags('test')
 @Controller('test')
 export class testController {
+  @Public()
   @Get()
   @ApiOperation({ summary: '测试接口', description: '返回测试信息' })
   @ApiResponse({ status: 200, description: '成功返回测试信息' })

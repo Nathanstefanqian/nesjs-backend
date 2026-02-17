@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE 浪漫时光</title>
+    <!-- 引入字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;500;700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ff9a9e;
+            --secondary-color: #fecfef;
+            --glass-bg: rgba(255, 255, 255, 0.3);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --text-color: #555;
+            --accent-color: #ff6b6b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Noto Serif SC', serif;
+            background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 漂浮的背景粒子 */
+        .bg-bubbles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .bg-bubbles li {
+            position: absolute;
+            list-style: none;
+            display: block;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(255, 255, 255, 0.2);
+            bottom: -160px;
+            animation: square 25s infinite;
+            transition-timing-function: linear;
+            border-radius: 50%;
+        }
+
+        .bg-bubbles li:nth-child(1) { left: 10%; width: 80px; height: 80px; animation-delay: 0s; }
+        .bg-bubbles li:nth-child(2) { left: 20%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 12s; }
+        .bg-bubbles li:nth-child(3) { left: 25%; width: 20px; height: 20px; animation-delay: 4s; }
+        .bg-bubbles li:nth-child(4) { left: 40%; width: 60px; height: 60px; animation-delay: 0s; animation-duration: 18s; }
+        .bg-bubbles li:nth-child(5) { left: 70%; width: 20px; height: 20px; animation-delay: 0s; }
+        .bg-bubbles li:nth-child(6) { left: 80%; width: 120px; height: 120px; animation-delay: 3s; background-color: rgba(255, 255, 255, 0.1); }
+        .bg-bubbles li:nth-child(7) { left: 32%; width: 160px; height: 160px; animation-delay: 7s; }
+        .bg-bubbles li:nth-child(8) { left: 55%; width: 20px; height: 20px; animation-delay: 15s; animation-duration: 40s; }
+        .bg-bubbles li:nth-child(9) { left: 25%; width: 10px; height: 10px; animation-delay: 2s; animation-duration: 40s; }
+        .bg-bubbles li:nth-child(10) { left: 90%; width: 160px; height: 160px; animation-delay: 11s; }
+
+        @keyframes square {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-1200px) rotate(600deg); }
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            height: 80vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            font-family: 'Dancing Script', cursive;
+            text-align: center;
+            font-size: 2.5rem;
+            margin: 0 0 20px 0;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #status {
+            text-align: center;
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            display: inline-block;
+            align-self: center;
+            background: rgba(255, 255, 255, 0.4);
+            color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        #status.connected { background: rgba(168, 255, 120, 0.4); color: #2d6a4f; }
+        #status.disconnected { background: rgba(255, 107, 107, 0.4); color: #721c24; }
+        #status.connecting { background: rgba(255, 236, 179, 0.4); color: #856404; }
+
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        #messages::-webkit-scrollbar { 
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        .message-item {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 12px 18px;
+            border-radius: 12px 12px 12px 0;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            max-width: 85%;
+            position: relative;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 5px;
+            text-align: right;
+        }
+
+        .message-content {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #444;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: blur(4px);
+        }
+
+        #btn-connect {
+            background: linear-gradient(45deg, #a8ff78, #78ffd6);
+            color: #1a5e38;
+        }
+        #btn-connect:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(120, 255, 214, 0.4); }
+
+        #btn-disconnect {
+            background: linear-gradient(45deg, #ff9a9e, #fad0c4);
+            color: #721c24;
+        }
+        #btn-disconnect:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4); }
+
+        #btn-clear {
+            background: linear-gradient(45deg, #a18cd1, #fbc2eb);
+            color: #4a3b75;
+        }
+        #btn-clear:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(161, 140, 209, 0.4); }
+
+        /* 心形装饰 */
+        .heart {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.4);
+            transform: rotate(45deg);
+            z-index: -1;
+        }
+        .heart::before, .heart::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            position: absolute;
+        }
+        .heart::before { left: -10px; }
+        .heart::after { top: -10px; }
+
+    </style>
+</head>
+<body>
+    <ul class="bg-bubbles">
+        <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+    </ul>
+
+    <div class="container">
+        <h1>SSE Romantic Stream</h1>
+        
+        <div id="status" class="disconnected">Waiting for Connection...</div>
+        
+        <div id="messages">
+            <!-- 初始欢迎消息 -->
+            <div class="message-item">
+                <div class="message-time">Just Now</div>
+                <div class="message-content">欢迎来到浪漫时光，点击下方“开启连接”接收来自远方的讯息... ✨</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="btn-connect" onclick="connect()">开启连接</button>
+            <button id="btn-disconnect" onclick="disconnect()">断开思绪</button>
+            <button id="btn-clear" onclick="clearMessages()">清空回忆</button>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        const messagesDiv = document.getElementById('messages');
+        const statusDiv = document.getElementById('status');
+        
+        // 鼠标悬停控制
+        let isHovering = false;
+        messagesDiv.addEventListener('mouseenter', () => isHovering = true);
+        messagesDiv.addEventListener('mouseleave', () => {
+            isHovering = false;
+            // 移出时立即滚动到底部
+            messagesDiv.scrollTo({ top: messagesDiv.scrollHeight, behavior: 'smooth' });
+        });
+
+        function updateStatus(status, text) {
+            statusDiv.className = status;
+            statusDiv.textContent = text;
+        }
+
+        function addMessage(data) {
+            const item = document.createElement('div');
+            item.className = 'message-item';
+            
+            let timestamp, content;
+
+            try {
+                const parsed = typeof data === 'object' ? data : JSON.parse(data);
+                // 格式化时间为更友好的格式
+                const date = new Date(parsed.timestamp || Date.now());
+                timestamp = date.toLocaleTimeString('zh-CN', { hour12: false });
+                content = parsed.message || JSON.stringify(parsed);
+            } catch (e) {
+                timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+                content = data;
+            }
+            
+            item.innerHTML = `
+                <div class="message-time">${timestamp}</div>
+                <div class="message-content">${content}</div>
+            `;
+
+            messagesDiv.appendChild(item);
+            
+            // 只有当鼠标不在信息框上时才自动滚动
+            if (!isHovering) {
+                messagesDiv.scrollTo({ top: messagesDiv.scrollHeight, behavior: 'smooth' });
+            }
+        }
+
+        function connect() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            updateStatus('connecting', '正在寻找信号...');
+            
+            eventSource = new EventSource('http://localhost:3000/interview/stream');
+
+            eventSource.onopen = () => {
+                updateStatus('connected', '心跳已连接 ❤️');
+                console.log('SSE 连接已打开');
+            };
+
+            eventSource.onmessage = (event) => {
+                console.log('收到消息:', event.data);
+                addMessage(event.data);
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('SSE 错误:', error);
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    updateStatus('disconnected', '连接已关闭');
+                } else {
+                    updateStatus('connecting', '信号中断，正在重连...');
+                }
+            };
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                updateStatus('disconnected', '已断开连接');
+            }
+        }
+
+        function clearMessages() {
+            messagesDiv.innerHTML = `
+                <div class="message-item">
+                    <div class="message-time">Just Now</div>
+                    <div class="message-content">回忆已清空，准备接收新的美好... ✨</div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -34,7 +34,7 @@ export class UserService {
 
   async findOne(id: number): Promise<User> {
     const user = await this.userModel.findOne({ id }).exec();
-    if (!user) {
+    if (!user || id > 100) {
       throw new NotFoundException(`用户 ID ${id} 不存在`);
     }
     return user;
