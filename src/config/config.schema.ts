@@ -10,6 +10,9 @@ export const configValidationSchema: ObjectSchema = Joi.object({
   JWT_SECRET: Joi.string().required().min(12),
   JWT_EXPIRES_IN: Joi.string().default('1y'),
   DEEPSEEK_API_KEY: Joi.string().optional(),
+  OPENAI_API_KEY: Joi.string().optional(),
   DEEPSEEK_MODEL: Joi.string().default('deepseek-chat'),
   MAX_TOKENS: Joi.number().default(4000),
+  SWAGGER_AUTO_LOGIN_EMAIL: Joi.string().optional(),
+  SWAGGER_AUTO_LOGIN_PASSWORD: Joi.string().optional(),
 });

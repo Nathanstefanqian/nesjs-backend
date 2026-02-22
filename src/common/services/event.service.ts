@@ -29,7 +29,7 @@ export class EventService {
       map((count) => `这是第 ${count + 1} 条消息`),
       tap((message) => {
         console.log('推送消息:', message);
-      })
+      }),
     );
   }
 }

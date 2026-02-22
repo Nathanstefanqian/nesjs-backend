@@ -9,7 +9,14 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  Request,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import {
   ApiTags,
   ApiOperation,
@@ -54,34 +61,60 @@ export class UserController {
   }
 
   @Public()
-  @Post()
-  @ApiOperation({ summary: '创建新用户', description: '创建一个新的用户' })
-  @ApiResponse({ status: 201, description: '用户创建成功' })
+  @Post('register')
+  @ApiOperation({ summary: '注册新用户', description: '注册一个新的用户' })
+  @ApiResponse({ status: 201, description: '用户注册成功' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 409, description: 'Email 已存在' })
-  async create(@Body() createUserDto: CreateUserDto): Promise<User> {
-    return this.userService.create(createUserDto);
+  @ApiResponse({ status: 409, description: 'Email 或用户名已存在' })
+  async register(@Body() createUserDto: CreateUserDto): Promise<User> {
+    return this.userService.register(createUserDto);
   }
 
-  @Put(':id')
+  @Put('profile')
   @ApiOperation({
-    summary: '更新用户信息',
-    description: '根据用户 ID 更新用户信息',
-  })
-  @ApiParam({
-    name: 'id',
-    description: '用户 ID (从1开始的整数)',
-    type: Number,
+    summary: '更新个人信息',
+    description: '更新当前登录用户的个人信息',
   })
   @ApiResponse({ status: 200, description: '用户更新成功' })
-  @ApiResponse({ status: 400, description: '无效的 ID 格式' })
+  @ApiResponse({ status: 400, description: '请求参数错误或邮箱已存在' })
   @ApiResponse({ status: 404, description: '用户不存在' })
-  @ApiResponse({ status: 409, description: 'Email 已存在' })
+  @ApiResponse({ status: 409, description: '数据冲突' })
   async update(
-    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<User> {
-    return this.userService.update(id, updateUserDto);
+    const { userId } = req.user;
+    return this.userService.update(userId, updateUserDto);
+  }
+
+  @Post('avatar')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './public/uploads/avatars',
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          return cb(null, `${randomName}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  @ApiOperation({ summary: '上传头像', description: '上传用户头像' })
+  @ApiResponse({ status: 201, description: '头像上传成功' })
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('请上传文件');
+    }
+    const avatarUrl = `/uploads/avatars/${file.filename}`;
+    const { userId } = req.user;
+    await this.userService.updateAvatar(userId, avatarUrl);
+    return { url: avatarUrl };
   }
 
   @Delete(':id')

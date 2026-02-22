@@ -24,12 +24,12 @@ export class LoginResponseDto {
     example: {
       userId: 1,
       email: 'admin@example.com',
-      name: '管理员',
+      username: '管理员',
     },
   })
   user: {
     userId: number;
     email: string;
-    name: string;
+    username: string;
   };
 }

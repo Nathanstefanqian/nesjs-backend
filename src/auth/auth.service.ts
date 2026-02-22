@@ -23,18 +23,20 @@ export class AuthService {
 
     if (!user) {
       this.logger.warn('User not found in DB');
-      throw new UnauthorizedException('邮箱或密码错误');
+      throw new UnauthorizedException('没找到这个用户呢宝宝');
     }
-    if (user.password !== loginDto.password) {
+
+    const isPasswordValid = await user.comparePassword(loginDto.password);
+    if (!isPasswordValid) {
       this.logger.warn('Password mismatch');
-      throw new UnauthorizedException('邮箱或密码错误');
+      throw new UnauthorizedException('密码错误呢宝宝');
     }
 
     // 生成 JWT token
     const payload = {
       userId: user.id,
       email: user.email,
-      name: user.name,
+      username: user.username,
     };
 
     const access_token = this.jwtService.sign(payload);
@@ -46,7 +48,7 @@ export class AuthService {
       user: {
         userId: user.id,
         email: user.email,
-        name: user.name,
+        username: user.username,
       },
     };
   }

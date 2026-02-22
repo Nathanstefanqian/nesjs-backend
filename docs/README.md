@@ -60,6 +60,9 @@
 - 需要自增 ID？查看 [用户ID自增实现文档.md](./用户ID自增实现文档.md)
 - 需要配置数据库？查看 [数据库配置提供者对比.md](./数据库配置提供者对比.md)
 
+### Swagger
+- 自动登录需要在 `.env.development` 配置 `SWAGGER_AUTO_LOGIN_EMAIL` 和 `SWAGGER_AUTO_LOGIN_PASSWORD`
+
 ## 📅 更新日志
 
 - **2026-02-14**: 创建文档目录，整理现有文档
@@ -80,4 +83,3 @@
 
 **维护者**: AI Assistant  
 **最后更新**: 2026-02-14
-

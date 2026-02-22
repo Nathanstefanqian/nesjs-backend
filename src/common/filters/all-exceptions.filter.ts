@@ -52,6 +52,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
+    if (response.headersSent) {
+      response.end();
+      return;
+    }
     response.status(status).json(errorResponse);
   }
 }

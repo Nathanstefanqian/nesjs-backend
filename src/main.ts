@@ -1,14 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { MongoExceptionFilter } from './common/filters/mongo-exception.filter';
 import { ConfigService } from '@nestjs/config';
+import { openBrowser } from './utils/open-browser';
+import { setupSwagger } from './config/swagger.config';
+import { winstonLogger } from './config/logger.config';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: winstonLogger,
+  });
+
+  // 配置静态资源服务
+  app.useStaticAssets(join(__dirname, '..', 'public'));
 
   // 允许跨域
   app.enableCors();
@@ -32,34 +41,14 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger 配置
-  const config = new DocumentBuilder()
-    .setTitle('Demo API')
-    .setDescription('Demo API 文档')
-    .setVersion('1.0')
-    .addTag('auth', '认证授权')
-    .addTag('users', '用户管理')
-    .addTag('interviews', '面试管理')
-    .addTag('test', '测试接口')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: '输入 JWT token',
-        in: 'header',
-      },
-      'JWT-auth',
-    )
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
-
   const configService = app.get(ConfigService);
+  setupSwagger(app, {
+    autoLoginEmail: configService.get<string>('SWAGGER_AUTO_LOGIN_EMAIL'),
+    autoLoginPassword: configService.get<string>('SWAGGER_AUTO_LOGIN_PASSWORD'),
+  });
   const port = configService.get<number>('PORT', 3000);
-  await app.listen(port);
+  // Listen on 0.0.0.0 to ensure IPv4 accessibility (fixes ECONNREFUSED on some systems)
+  await app.listen(port, '0.0.0.0');
 
   const appUrl = `http://localhost:${port}`;
   const swaggerUrl = `${appUrl}/api`;
@@ -69,5 +58,9 @@ async function bootstrap() {
   console.log(
     `SSE测试地址在 file:///Users/nathanq/sites/fungleo/nestjs-be/public/sse.html`,
   );
+
+  if (process.env.NODE_ENV !== 'production') {
+    openBrowser(swaggerUrl);
+  }
 }
 void bootstrap();

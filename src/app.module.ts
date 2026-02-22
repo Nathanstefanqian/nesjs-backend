@@ -2,19 +2,28 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { InterviewModule } from './interview/interview.module';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
+import { AIModule } from './ai/ai.module';
+import { ChatModule } from './chat/chat.module';
+import { FriendModule } from './friend/friend.module';
+import { AdminModule } from './admin/admin.module';
+import { VideoTaskModule } from './video-task/video-task.module';
+import { WatchPartyModule } from './watch-party/watch-party.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { CacheInterceptor } from './common/interceptors/cache.interceptor';
+// import { CacheInterceptor } from './common/interceptors/cache.interceptor';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 import { configValidationSchema } from './config/config.schema';
+import { PostModule } from './post/post.module';
 
 @Module({
   imports: [
@@ -27,6 +36,9 @@ import { configValidationSchema } from './config/config.schema';
         abortEarly: true,
       },
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+    }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -38,6 +50,13 @@ import { configValidationSchema } from './config/config.schema';
     UserModule,
     InterviewModule,
     CommonModule,
+    PostModule,
+    AIModule,
+    ChatModule,
+    FriendModule,
+    AdminModule,
+    VideoTaskModule,
+    WatchPartyModule,
   ],
   controllers: [AppController],
   providers: [
@@ -51,10 +70,10 @@ import { configValidationSchema } from './config/config.schema';
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: CacheInterceptor,
-    },
+    // {
+    //   provide: APP_INTERCEPTOR,
+    //   useClass: CacheInterceptor,
+    // },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
