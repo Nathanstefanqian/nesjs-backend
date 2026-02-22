@@ -29,7 +29,7 @@ export class AIController {
       closed = true;
     });
 
-    const user = req.user as { userId: number };
+    const user = (req as any).user;
     try {
       await this.aiService.streamChat(
         user.userId,
@@ -76,19 +76,26 @@ export class AIController {
   @ApiOperation({ summary: '生成对话标题' })
   @ApiResponse({ status: 200, description: '生成成功' })
   async generateTitle(@Body() body: GenerateTitleDto, @Req() req: Request) {
-    const user = req.user as { userId: number };
-    return this.aiService.generateTitle(
-      user.userId,
-      body.message,
-      body.conversationId,
-    );
+    const user = (req as any).user;
+    try {
+      return await this.aiService.generateTitle(
+        user.userId,
+        body.message,
+        body.conversationId,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('API_KEY')) {
+        throw new Error(error.message); // 让全局过滤器处理，但在日志中会更清晰
+      }
+      throw error;
+    }
   }
 
   @Post('image/generate')
   @ApiOperation({ summary: '生成图片' })
   @ApiResponse({ status: 200, description: '生成成功，返回图片URL' })
   async generateImage(@Body() body: GenerateImageDto, @Req() req: Request) {
-    const user = req.user as { userId: number };
+    const user = (req as any).user;
     const imageUrl = await this.aiService.generateImage(
       user.userId,
       body.prompt,

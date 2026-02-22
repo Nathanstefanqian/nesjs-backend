@@ -28,8 +28,9 @@ export class UserService {
     return counter.seq;
   }
 
-  async findAll(): Promise<User[]> {
-    return this.userModel.find().exec();
+  async findAll(excludeUserId?: number): Promise<User[]> {
+    const query = excludeUserId ? { id: { $ne: excludeUserId } } : {};
+    return this.userModel.find(query).exec();
   }
 
   async findOne(id: number): Promise<User> {

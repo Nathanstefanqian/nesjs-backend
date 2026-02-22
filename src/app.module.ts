@@ -16,6 +16,7 @@ import { FriendModule } from './friend/friend.module';
 import { AdminModule } from './admin/admin.module';
 import { VideoTaskModule } from './video-task/video-task.module';
 import { WatchPartyModule } from './watch-party/watch-party.module';
+import { GameModule } from './game/game.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -57,6 +58,7 @@ import { PostModule } from './post/post.module';
     AdminModule,
     VideoTaskModule,
     WatchPartyModule,
+    GameModule,
   ],
   controllers: [AppController],
   providers: [

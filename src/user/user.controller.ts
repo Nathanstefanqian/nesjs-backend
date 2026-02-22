@@ -39,8 +39,8 @@ export class UserController {
   @Get()
   @ApiOperation({ summary: '获取所有用户', description: '返回用户列表' })
   @ApiResponse({ status: 200, description: '成功返回用户列表' })
-  async findAll(): Promise<User[]> {
-    return this.userService.findAll();
+  async findAll(@Request() req: { user: { userId: number } }): Promise<User[]> {
+    return this.userService.findAll(req.user.userId);
   }
 
   @Get(':id')
