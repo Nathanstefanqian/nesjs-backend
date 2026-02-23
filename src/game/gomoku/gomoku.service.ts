@@ -1,4 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { GameRecord, GameRecordDocument } from '../schemas/game-record.schema';
 
 export interface Player {
   id: string; // Socket ID
@@ -15,11 +18,16 @@ export interface GameRoom {
   currentTurn: 'black' | 'white';
   winner: 'black' | 'white' | 'draw' | null;
   status: 'waiting' | 'playing' | 'finished';
+  moves: string[];
 }
 
 @Injectable()
 export class GomokuService {
   private rooms: Map<string, GameRoom> = new Map();
+
+  constructor(
+    @InjectModel(GameRecord.name) private gameRecordModel: Model<GameRecordDocument>,
+  ) {}
 
   createRoom(client: any, user: { userId: number; username: string }): GameRoom {
     const roomId = Math.floor(100000 + Math.random() * 900000).toString();
@@ -31,6 +39,7 @@ export class GomokuService {
       currentTurn: 'black',
       winner: null,
       status: 'waiting',
+      moves: [],
     };
     
     // Creator starts as spectator
@@ -165,11 +174,11 @@ export class GomokuService {
     return room;
   }
 
-  makeMove(roomId: string, clientId: string, x: number, y: number): GameRoom {
+  async makeMove(roomId: string, clientId: string, x: number, y: number): Promise<GameRoom> {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('Room not found');
 
-    const player = room.players.find(p => p.id === clientId);
+    const player = room.players.find((p) => p.id === clientId);
     if (!player) throw new Error('Player not in room');
 
     if (room.status !== 'playing') throw new Error('Game not in progress');
@@ -180,35 +189,65 @@ export class GomokuService {
 
     // Update board
     room.board[y][x] = player.color!;
+    if (!room.moves) room.moves = []; // Ensure moves exists
+    room.moves.push(`${player.color}:${x},${y}`);
 
     // Check win
     if (this.checkWin(room.board, x, y, player.color!)) {
       room.winner = player.color!;
       room.status = 'finished';
+      await this.saveGameRecord(room);
     } else {
-        // Check draw
-        if (room.board.every(row => row.every(cell => cell !== null))) {
-            room.winner = 'draw';
-            room.status = 'finished';
-        } else {
-             // Switch turn
-            room.currentTurn = room.currentTurn === 'black' ? 'white' : 'black';
-        }
+      // Check draw
+      if (room.board.every((row) => row.every((cell) => cell !== null))) {
+        room.winner = 'draw';
+        room.status = 'finished';
+        await this.saveGameRecord(room);
+      } else {
+        // Switch turn
+        room.currentTurn = room.currentTurn === 'black' ? 'white' : 'black';
+      }
     }
 
     return room;
   }
 
+  private async saveGameRecord(room: GameRoom) {
+    const blackPlayer = room.players.find((p) => p.color === 'black');
+    const whitePlayer = room.players.find((p) => p.color === 'white');
+
+    if (!blackPlayer || !whitePlayer || !room.winner) return;
+
+    try {
+      await this.gameRecordModel.create({
+        roomId: room.roomId,
+        blackPlayerId: blackPlayer.userId,
+        blackPlayerUsername: blackPlayer.username,
+        whitePlayerId: whitePlayer.userId,
+        whitePlayerUsername: whitePlayer.username,
+        winner: room.winner,
+        moves: room.moves,
+        startTime: new Date(), // Placeholder
+        endTime: new Date(),
+      });
+    } catch (error) {
+      console.error('Failed to save game record:', error);
+    }
+  }
+
   restartGame(roomId: string): GameRoom {
-      const room = this.rooms.get(roomId);
-      if (!room) throw new Error('Room not found');
-      
-      room.board = Array(15).fill(null).map(() => Array(15).fill(null));
-      room.winner = null;
-      room.currentTurn = 'black';
-      room.status = room.players.length === 2 ? 'playing' : 'waiting';
-      
-      return room;
+    const room = this.rooms.get(roomId);
+    if (!room) throw new Error('Room not found');
+
+    room.board = Array(15)
+      .fill(null)
+      .map(() => Array(15).fill(null));
+    room.winner = null;
+    room.currentTurn = 'black';
+    room.status = room.players.length === 2 ? 'playing' : 'waiting';
+    room.moves = [];
+
+    return room;
   }
 
   private checkWin(board: (string | null)[][], x: number, y: number, color: string): boolean {

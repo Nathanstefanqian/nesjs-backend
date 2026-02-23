@@ -37,6 +37,7 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       username: user.username,
+      role: user.role || 'user',
     };
 
     const access_token = this.jwtService.sign(payload);
@@ -49,6 +50,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         username: user.username,
+        role: user.role,
       },
     };
   }

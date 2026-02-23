@@ -117,12 +117,12 @@ export class GomokuGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('make_move')
-  handleMakeMove(
+  async handleMakeMove(
     @ConnectedSocket() client: AuthedSocket,
     @MessageBody() data: { roomId: string; x: number; y: number },
   ) {
     try {
-      const room = this.gomokuService.makeMove(
+      const room = await this.gomokuService.makeMove(
         data.roomId,
         client.id,
         data.x,

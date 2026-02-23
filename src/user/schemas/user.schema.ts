@@ -29,6 +29,9 @@ export class User {
   @Prop({ default: 'active' })
   status: string;
 
+  @Prop({ default: 'user', enum: ['user', 'admin'] })
+  role: string;
+
   @Prop({ default: Date.now })
   createdAt: Date;
 }
