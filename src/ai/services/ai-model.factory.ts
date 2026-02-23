@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { DallEAPIWrapper } from '@langchain/openai';
+import { MinimaxImageWrapper } from './minimax-image.wrapper';
 
 @Injectable()
 export class AIModelFactory {
@@ -32,6 +33,17 @@ export class AIModelFactory {
       n: 1,
       modelName,
       apiKey,
+    });
+  }
+
+  createMinimaxImageWrapper(modelName = 'image-01'): MinimaxImageWrapper {
+    const apiKey = this.configService.get<string>('MINIMAX_API_KEY');
+    if (!apiKey) {
+      throw new Error('MINIMAX_API_KEY not found in environment variables');
+    }
+    return new MinimaxImageWrapper({
+      apiKey,
+      modelName,
     });
   }
 }

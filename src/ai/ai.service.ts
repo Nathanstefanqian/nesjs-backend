@@ -1,6 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { AIModelFactory } from './services/ai-model.factory';
 import { ChatService } from '../chat/chat.service';
+import {
+  GeneratedImage,
+  GeneratedImageDocument,
+} from './schemas/generated-image.schema';
 
 import {
   HumanMessage,
@@ -10,18 +16,138 @@ import {
 
 @Injectable()
 export class AIService {
+  private readonly logger = new Logger(AIService.name);
+
+  // 估算价格 (CNY)
+  private readonly MODEL_PRICING = {
+    'image-01': 0.15, // Minimax image-01
+    'dall-e-3': 0.3, // OpenAI DALL-E 3
+    default: 0.2,
+  };
+
   constructor(
+    @InjectModel(GeneratedImage.name)
+    private readonly generatedImageModel: Model<GeneratedImageDocument>,
     private readonly aiModelFactory: AIModelFactory,
     private readonly chatService: ChatService,
   ) {}
+
+  async getHistory(userId: number): Promise<GeneratedImageDocument[]> {
+    return this.generatedImageModel
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async deleteHistory(
+    id: string,
+    userId: number,
+  ): Promise<GeneratedImageDocument | null> {
+    return this.generatedImageModel
+      .findOneAndDelete({ _id: id, userId })
+      .exec();
+  }
+
+  async getTotalCost(userId: number): Promise<number> {
+    const result = await this.generatedImageModel.aggregate([
+      { $match: { userId } },
+      { $group: { _id: null, totalCost: { $sum: '$cost' } } },
+    ]);
+    return result.length > 0 ? (result[0].totalCost as number) || 0 : 0;
+  }
 
   async generateImage(
     userId: number,
     prompt: string,
     modelName?: string,
+    aspectRatio?: string,
+    promptOptimizer?: boolean,
+    aigcWatermark?: boolean,
+    seed?: number,
+    referenceImage?: string,
   ): Promise<string> {
+    this.logger.log(
+      `Generating image for user ${userId} with model: ${modelName || 'default(minimax)'}, ratio: ${aspectRatio}`,
+    );
+    // 默认使用 Minimax 模型 (image-01)，除非明确指定其他模型
+    const useMinimax = !modelName || modelName.startsWith('image-01');
+
+    if (useMinimax) {
+      const tool = this.aiModelFactory.createMinimaxImageWrapper(
+        modelName || 'image-01',
+      );
+      // Pass aspect_ratio to the tool invocation
+      const imageUrl = (await tool.invoke({
+        prompt,
+        aspect_ratio: aspectRatio,
+        prompt_optimizer: promptOptimizer,
+        aigc_watermark: aigcWatermark,
+        seed,
+        reference_image: referenceImage,
+      })) as string;
+
+      await this.saveGeneratedImage(
+        userId,
+        imageUrl,
+        prompt,
+        modelName,
+        aspectRatio,
+        seed,
+      );
+
+      return imageUrl;
+    }
+
     const tool = this.aiModelFactory.createDallEWrapper(modelName);
-    return await tool.invoke(prompt);
+    const imageUrl = (await tool.invoke(prompt)) as string;
+
+    await this.saveGeneratedImage(
+      userId,
+      imageUrl,
+      prompt,
+      modelName,
+      aspectRatio,
+      seed,
+    );
+
+    return imageUrl;
+  }
+
+  private async saveGeneratedImage(
+    userId: number,
+    url: string,
+    prompt: string,
+    model?: string,
+    aspectRatio?: string,
+    seed?: number,
+  ) {
+    let cost = 0;
+    const modelName = model || 'image-01';
+
+    // Simple cost calculation logic
+    if (modelName.includes('dall-e-3')) {
+      cost = this.MODEL_PRICING['dall-e-3'];
+    } else if (modelName.includes('image-01')) {
+      cost = this.MODEL_PRICING['image-01'];
+    } else {
+      cost = this.MODEL_PRICING.default;
+    }
+
+    try {
+      await this.generatedImageModel.create({
+        userId,
+        url,
+        prompt,
+        model,
+        aspectRatio,
+        seed,
+        cost,
+        currency: 'CNY',
+      });
+    } catch (error) {
+      this.logger.error('Failed to save generated image record', error);
+      // Don't fail the request if saving history fails
+    }
   }
 
   async streamChat(

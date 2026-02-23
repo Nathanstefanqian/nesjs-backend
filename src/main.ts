@@ -5,7 +5,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { MongoExceptionFilter } from './common/filters/mongo-exception.filter';
 import { ConfigService } from '@nestjs/config';
-import { openBrowser } from './utils/open-browser';
+// import { openBrowser } from './utils/open-browser';
 import { setupSwagger } from './config/swagger.config';
 import { winstonLogger } from './config/logger.config';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -59,8 +59,8 @@ async function bootstrap() {
     `SSE测试地址在 file:///Users/nathanq/sites/fungleo/nestjs-be/public/sse.html`,
   );
 
-  if (process.env.NODE_ENV !== 'production') {
-    openBrowser(swaggerUrl);
-  }
+  // if (process.env.NODE_ENV !== 'production') {
+  //   openBrowser(swaggerUrl);
+  // }
 }
 void bootstrap();

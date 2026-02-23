@@ -15,8 +15,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import {
   ApiTags,
   ApiOperation,
@@ -29,12 +27,16 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './schemas/user.schema';
 import { Public } from '../auth/decorators/public.decorator';
+import { OssService } from '../common/services/oss.service';
 
 @ApiTags('users')
 @ApiBearerAuth('JWT-auth')
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly ossService: OssService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: '获取所有用户', description: '返回用户列表' })
@@ -88,20 +90,7 @@ export class UserController {
   }
 
   @Post('avatar')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './public/uploads/avatars',
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          return cb(null, `${randomName}${extname(file.originalname)}`);
-        },
-      }),
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: '上传头像', description: '上传用户头像' })
   @ApiResponse({ status: 201, description: '头像上传成功' })
   async uploadAvatar(
@@ -111,7 +100,11 @@ export class UserController {
     if (!file) {
       throw new BadRequestException('请上传文件');
     }
-    const avatarUrl = `/uploads/avatars/${file.filename}`;
+    const avatarUrl = await this.ossService.uploadFile(
+      file.buffer,
+      file.originalname,
+      'avatars',
+    );
     const { userId } = req.user;
     await this.userService.updateAvatar(userId, avatarUrl);
     return { url: avatarUrl };

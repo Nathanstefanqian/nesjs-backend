@@ -50,8 +50,9 @@ export class FriendService {
       if (existing.requesterId !== userId) {
         existing.status = 'accepted';
         await existing.save();
+        return existing;
       }
-      return existing;
+      throw new BadRequestException('已发送过好友请求，请等待对方同意');
     }
     existing.status = 'pending';
     existing.requesterId = userId;

@@ -1,4 +1,13 @@
-import { Body, Controller, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Param,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AIService } from './ai.service';
@@ -101,7 +110,37 @@ export class AIController {
       user.userId,
       body.prompt,
       body.model,
+      body.aspect_ratio,
+      body.prompt_optimizer,
+      body.aigc_watermark,
+      body.seed,
+      body.reference_image,
     );
     return { imageUrl };
+  }
+
+  @Get('image/cost')
+  @ApiOperation({ summary: '获取图片生成总花费' })
+  @ApiResponse({ status: 200, description: '返回总花费' })
+  async getTotalCost(@Req() req: Request) {
+    const user = (req as any).user;
+    const totalCost = await this.aiService.getTotalCost(user.userId);
+    return { totalCost, currency: 'CNY' };
+  }
+
+  @Get('image/history')
+  @ApiOperation({ summary: '获取图片生成历史' })
+  @ApiResponse({ status: 200, description: '返回历史记录列表' })
+  async getHistory(@Req() req: Request) {
+    const user = (req as any).user;
+    return this.aiService.getHistory(user.userId);
+  }
+
+  @Delete('image/history/:id')
+  @ApiOperation({ summary: '删除图片生成历史' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  async deleteHistory(@Param('id') id: string, @Req() req: Request) {
+    const user = (req as any).user;
+    return this.aiService.deleteHistory(id, user.userId);
   }
 }
